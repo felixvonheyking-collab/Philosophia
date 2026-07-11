@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Philosophia</title>
+
+  <!-- Für "Zum Startbildschirm hinzufügen" -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="theme-color" content="#1B1F2A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Philosophia" />
+
+  <style>
+    html, body { margin: 0; padding: 0; background: #1B1F2A; min-height: 100vh; }
+    #root { min-height: 100vh; }
+    #ladehinweis {
+      position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #C9A25D; font-family: Georgia, serif; font-size: 18px; letter-spacing: 0.05em; text-align: center; padding: 20px; box-sizing: border-box;
+    }
+    #fehlerhinweis { color: #8B3A3A; font-size: 13px; margin-top: 14px; font-family: sans-serif; white-space: pre-wrap; text-align: left; max-width: 100%; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div id="root"><div id="ladehinweis">Philosophia lädt …</div></div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "lucide-react": "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1"
+    }
+  }
+  </script>
+
+  <script type="module">
+    window.addEventListener('error', (e) => {
+      const el = document.getElementById('ladehinweis');
+      if (el) {
+        el.innerHTML = 'Philosophia konnte nicht geladen werden.<div id="fehlerhinweis">' + (e.message || e) + '</div>';
+      }
+    });
+
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import PhilosophieApp from './philosophie-app.js';
+
+    createRoot(document.getElementById('root')).render(React.createElement(PhilosophieApp));
+  </script>
+</body>
+</html>

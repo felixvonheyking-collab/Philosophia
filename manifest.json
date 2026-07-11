@@ -1,0 +1,14 @@
+{
+  "name": "Philosophia",
+  "short_name": "Philosophia",
+  "description": "Persönlicher Philosophie-Karteikasten",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1B1F2A",
+  "theme_color": "#1B1F2A",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
