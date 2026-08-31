@@ -8,7 +8,7 @@
  * dass eine neue Fassung bereitliegt, lädt sie nach und meldet sie in der App.
  */
 
-const VERSION = '2026-08-31-5';
+const VERSION = '2026-08-31-6';
 const CACHE = 'philosophia-' + VERSION;
 
 const DATEIEN = [
@@ -39,9 +39,24 @@ const DATEIEN = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(DATEIEN))
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+
+    // Nicht cache.addAll benutzen: das holt die Dateien über den normalen
+    // Browser-Cache. Wer die Seite kurz vorher offen hatte, bekäme dann die
+    // alte Fassung in den neuen Cache gelegt – und die bliebe dort bis zur
+    // nächsten Version festgefroren, obwohl der Server längst neu ausliefert.
+    // Deshalb: Version an die Adresse hängen und den Cache ausdrücklich umgehen.
+    await Promise.all(DATEIEN.map(async (pfad) => {
+      const trenner = pfad.includes('?') ? '&' : '?';
+      const antwort = await fetch(new Request(pfad + trenner + 'sw=' + VERSION, { cache: 'reload' }));
+      if (!antwort.ok) throw new Error('Konnte ' + pfad + ' nicht laden (' + antwort.status + ')');
+      // Unter der sauberen Adresse ablegen, ohne den Versionsanhang.
+      await cache.put(pfad, antwort);
+    }));
+    // Schlägt hier etwas fehl, scheitert die Installation bewusst – dann bleibt
+    // die bisherige, funktionierende Fassung aktiv statt einer halben neuen.
+  })());
 });
 
 self.addEventListener('activate', (event) => {
