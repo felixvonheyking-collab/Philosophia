@@ -238,6 +238,16 @@ export function anzahlFaellig() {
   }).length;
 }
 
+// "Quizfragen, Begriffen und Zitaten" – aber nur die tatsächlich aktiven.
+export function quellenText(quellen) {
+  const namen = [];
+  if (quellen.quiz) namen.push('Quizfragen');
+  if (quellen.begriffe) namen.push('Begriffen');
+  if (quellen.zitate) namen.push('Zitaten');
+  if (namen.length <= 1) return namen[0] || '–';
+  return namen.slice(0, -1).join(', ') + ' und ' + namen[namen.length - 1];
+}
+
 /* ------------------------------------------------------------------ Bausteine */
 
 function Knopf({ onClick, symbol, children, variante = 'haupt', disabled }) {
@@ -394,7 +404,7 @@ export default function WiederholenAnsicht() {
       h('div', null,
         h('div', { className: 'phil-display', style: { fontSize: '22px', color: FARBEN.pergament, letterSpacing: '0.02em' } }, 'Wiederholen'),
         h('div', { className: 'phil-sans', style: { fontSize: '12.5px', color: FARBEN.grau, marginTop: '3px' } },
-          `${karten.length} Karten aus Quiz, Begriffen und Zitaten · Fächer nach Leitner`)
+          `${karten.length} Karten aus ${quellenText(einstellungen.quellen)} · Fächer nach Leitner`)
       ),
       streak.tage > 0 && h('div', {
         className: 'phil-sans',

@@ -8,7 +8,7 @@
  * dass eine neue Fassung bereitliegt, lädt sie nach und meldet sie in der App.
  */
 
-const VERSION = '2026-08-31-2';
+const VERSION = '2026-08-31-3';
 const CACHE = 'philosophia-' + VERSION;
 
 const DATEIEN = [
