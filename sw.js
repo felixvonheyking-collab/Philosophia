@@ -20,6 +20,8 @@ const DATEIEN = [
   './philosophie-app.js',
   './ui-bausteine.js',
   './karteikasten.js',
+  './eigene-zitate.js',
+  './forschungsfragen.js',
   './datensicherung.js',
   './fehlerauffang.js',
   './daten-grund.js',

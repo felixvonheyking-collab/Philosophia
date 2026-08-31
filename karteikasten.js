@@ -22,6 +22,7 @@ import { CardShell, Chip } from './ui-bausteine.js';
 import { QUIZ } from './daten-quiz.js';
 import { BEGRIFFE } from './daten-begriffe.js';
 import { ZITATE } from './daten-zitate.js';
+import { ladeEigeneZitate } from './eigene-zitate.js';
 
 const h = React.createElement;
 
@@ -67,11 +68,16 @@ function schreib(schluessel, wert) {
 export const ladeStand = () => lies(SPEICHER_STAND, {});
 export const speichereStand = (stand) => schreib(SPEICHER_STAND, stand);
 
-export const ladeEinstellungen = () => ({
-  neuProTag: 10,
-  quellen: { quiz: true, begriffe: true, zitate: true },
-  ...lies(SPEICHER_EINSTELLUNGEN, {})
-});
+export const ladeEinstellungen = () => {
+  const gespeichert = lies(SPEICHER_EINSTELLUNGEN, {});
+  return {
+    neuProTag: 10,
+    ...gespeichert,
+    // Quellen einzeln zusammenführen: ein später hinzugekommener Kartentyp
+    // soll nicht fehlen, nur weil die gespeicherten Einstellungen älter sind.
+    quellen: { quiz: true, begriffe: true, zitate: true, eigene: true, ...(gespeichert.quellen || {}) }
+  };
+};
 export const speichereEinstellungen = (e) => schreib(SPEICHER_EINSTELLUNGEN, e);
 
 export const ladeStreak = () => lies(SPEICHER_STREAK, { tage: 0, letzterTag: null });
@@ -146,6 +152,22 @@ export function alleKarten(quellen) {
       antwort: z.name,
       zusatz: (z.themen && z.themen[0]) || ''
     }));
+  }
+
+  // Selbst erfasste Zitate. Nur die mit Verfasserangabe taugen als Frage –
+  // bei den übrigen wüsste man die Antwort nicht.
+  if (quellen.eigene) {
+    ladeEigeneZitate().forEach((z) => {
+      if (!z.autor || !z.autor.trim()) return;
+      karten.push({
+        id: 'e:' + z.id,
+        typ: 'zitat',
+        herkunft: 'Eigenes Zitat',
+        frage: `„${z.text}“ – von wem stammt das?`,
+        antwort: z.autor + (z.quelle ? '\n\n' + z.quelle : ''),
+        zusatz: z.quelle || ''
+      });
+    });
   }
 
   return karten;
@@ -244,6 +266,7 @@ export function quellenText(quellen) {
   if (quellen.quiz) namen.push('Quizfragen');
   if (quellen.begriffe) namen.push('Begriffen');
   if (quellen.zitate) namen.push('Zitaten');
+  if (quellen.eigene) namen.push('eigenen Zitaten');
   if (namen.length <= 1) return namen[0] || '–';
   return namen.slice(0, -1).join(', ') + ' und ' + namen[namen.length - 1];
 }
@@ -385,7 +408,7 @@ export default function WiederholenAnsicht() {
   function quellenUmschalten(name) {
     const quellen = { ...einstellungen.quellen, [name]: !einstellungen.quellen[name] };
     // Mindestens eine Quelle muss aktiv bleiben.
-    if (!quellen.quiz && !quellen.begriffe && !quellen.zitate) return;
+    if (!quellen.quiz && !quellen.begriffe && !quellen.zitate && !quellen.eigene) return;
     const neu = { ...einstellungen, quellen };
     setEinstellungen(neu);
     speichereEinstellungen(neu);
@@ -427,7 +450,8 @@ export default function WiederholenAnsicht() {
       h('div', { style: { display: 'flex', gap: '7px', flexWrap: 'wrap', marginBottom: '16px' } },
         h(Chip, { active: einstellungen.quellen.quiz, onClick: () => quellenUmschalten('quiz') }, `Quizfragen (${QUIZ.length})`),
         h(Chip, { active: einstellungen.quellen.begriffe, onClick: () => quellenUmschalten('begriffe') }, `Begriffe (${BEGRIFFE.length})`),
-        h(Chip, { active: einstellungen.quellen.zitate, onClick: () => quellenUmschalten('zitate') }, `Zitate (${ZITATE.length})`)
+        h(Chip, { active: einstellungen.quellen.zitate, onClick: () => quellenUmschalten('zitate') }, `Zitate (${ZITATE.length})`),
+        h(Chip, { active: einstellungen.quellen.eigene, onClick: () => quellenUmschalten('eigene') }, `Eigene Zitate (${ladeEigeneZitate().filter((z) => z.autor && z.autor.trim()).length})`)
       ),
       h('div', { className: 'phil-sans', style: { fontSize: '11px', color: FARBEN.grau, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' } }, 'Neue Karten pro Tag'),
       h('div', { style: { display: 'flex', gap: '7px', flexWrap: 'wrap' } },
