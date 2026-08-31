@@ -72,8 +72,12 @@ export function sammleDaten(speicher) {
 function umfang(rohwert) {
   try {
     const wert = JSON.parse(rohwert);
-    if (Array.isArray(wert)) return { anzahl: wert.length, einheit: 'Einträge' };
-    if (wert && typeof wert === 'object') return { anzahl: Object.keys(wert).length, einheit: 'Einträge' };
+    const wort = (n) => (n === 1 ? 'Eintrag' : 'Einträge');
+    if (Array.isArray(wert)) return { anzahl: wert.length, einheit: wort(wert.length) };
+    if (wert && typeof wert === 'object') {
+      const n = Object.keys(wert).length;
+      return { anzahl: n, einheit: wort(n) };
+    }
     return { anzahl: null, einheit: String(wert).slice(0, 40) };
   } catch (e) {
     return { anzahl: null, einheit: 'gespeichert' };
