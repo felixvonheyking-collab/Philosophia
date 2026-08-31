@@ -109,7 +109,13 @@ export function pruefeSicherung(objekt) {
     if (eintraege.length === 0) fehler.push('Die Sicherung ist leer.');
     for (const [k, v] of eintraege) {
       if (!k.startsWith(PRAEFIX)) fehler.push(`Unerwarteter Schlüssel „${k}" – gehört nicht zu Philosophia.`);
-      if (typeof v !== 'string') fehler.push(`Der Eintrag „${k}" hat ein unerwartetes Format.`);
+      if (typeof v !== 'string') {
+        fehler.push(`Der Eintrag „${k}" hat ein unerwartetes Format.`);
+      } else {
+        // Die App liest jeden Wert als JSON. Steht hier etwas anderes, würde
+        // sie beim nächsten Start darüber stolpern – also lieber jetzt ablehnen.
+        try { JSON.parse(v); } catch (e) { fehler.push(`Der Eintrag „${k}" ist beschädigt und nicht lesbar.`); }
+      }
     }
   }
   if (objekt.version && Number(objekt.version) > DATEI_VERSION) {

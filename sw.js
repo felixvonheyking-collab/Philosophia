@@ -8,7 +8,7 @@
  * dass eine neue Fassung bereitliegt, lädt sie nach und meldet sie in der App.
  */
 
-const VERSION = '2026-08-31-4';
+const VERSION = '2026-08-31-5';
 const CACHE = 'philosophia-' + VERSION;
 
 const DATEIEN = [
@@ -21,6 +21,7 @@ const DATEIEN = [
   './ui-bausteine.js',
   './karteikasten.js',
   './datensicherung.js',
+  './fehlerauffang.js',
   './daten-grund.js',
   './daten-philosophen.js',
   './daten-begriffe.js',

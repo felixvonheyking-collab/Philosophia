@@ -69,8 +69,13 @@
     import React from 'react';
     import { createRoot } from 'react-dom/client';
     import PhilosophieApp from './philosophie-app.js';
+    import Fehlerauffang from './fehlerauffang.js';
 
-    createRoot(document.getElementById('root')).render(React.createElement(PhilosophieApp));
+    // Der Fehlerauffang verhindert die weiße Seite: Stürzt eine Komponente ab,
+    // erscheint eine Erklärung samt Knopf, um die gespeicherten Daten zu retten.
+    createRoot(document.getElementById('root')).render(
+      React.createElement(Fehlerauffang, null, React.createElement(PhilosophieApp))
+    );
   </script>
 
   <script>
