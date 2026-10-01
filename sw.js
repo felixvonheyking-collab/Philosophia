@@ -8,7 +8,7 @@
  * dass eine neue Fassung bereitliegt, lädt sie nach und meldet sie in der App.
  */
 
-const VERSION = '2026-09-01-1';
+const VERSION = '2026-10-01-1';
 const CACHE = 'philosophia-' + VERSION;
 
 const DATEIEN = [
@@ -32,6 +32,7 @@ const DATEIEN = [
   './daten-lektuere.js',
   './daten-lernen.js',
   './daten-quiz.js',
+  './daten-geschichte.js',
   './daten-rhetorik.js',
   './font-cormorant-500.woff2',
   './font-cormorant-600.woff2',
