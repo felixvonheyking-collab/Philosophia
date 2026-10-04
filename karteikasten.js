@@ -23,6 +23,8 @@ import { QUIZ } from './daten-quiz.js';
 import { BEGRIFFE } from './daten-begriffe.js';
 import { ZITATE } from './daten-zitate.js';
 import { ladeEigeneZitate } from './eigene-zitate.js';
+import { GESCHICHTE } from './daten-geschichte.js';
+import { PHILOSOPHEN } from './daten-philosophen.js';
 
 const h = React.createElement;
 
@@ -75,7 +77,7 @@ export const ladeEinstellungen = () => {
     ...gespeichert,
     // Quellen einzeln zusammenführen: ein später hinzugekommener Kartentyp
     // soll nicht fehlen, nur weil die gespeicherten Einstellungen älter sind.
-    quellen: { quiz: true, begriffe: true, zitate: true, eigene: true, ...(gespeichert.quellen || {}) }
+    quellen: { quiz: true, begriffe: true, zitate: true, eigene: true, geschichte: true, ...(gespeichert.quellen || {}) }
   };
 };
 export const speichereEinstellungen = (e) => schreib(SPEICHER_EINSTELLUNGEN, e);
@@ -114,6 +116,88 @@ export function schluesselAusText(text) {
   let hash = 5381;
   for (let i = 0; i < text.length; i++) hash = ((hash * 33) ^ text.charCodeAt(i)) >>> 0;
   return hash.toString(36);
+}
+
+// Ungefaehres Lebensjahr fuer die Wahl zeitnaher Ablenker ("ca. 624–546 v. Chr." -> -624).
+function geburtsjahr(p) {
+  const m = (p.jahre || '').match(/(\d{1,4})/);
+  if (!m) return null;
+  const j = Number(m[1]);
+  const v = p.jahre.search(/v\.\s*Chr/), n = p.jahre.search(/n\.\s*Chr/);
+  const jh = /Jh/.test(p.jahre) ? 100 : 1; // "5. Jh. v. Chr." grob als -500
+  return (v >= 0 && (n < 0 || v < n) ? -1 : 1) * j * jh;
+}
+
+// Bedeutungstragende Wortstämme eines Titels (ab 6 Buchstaben, erste 6 Zeichen).
+const FUELL = new Set(['zwischen', 'gegen', 'ersten', 'zweite', 'zweiter', 'großen', 'große', 'großer', 'erfindung', 'geschichte', 'zeitalter']);
+function woerter(titel) {
+  return (titel || '').toLowerCase().split(/[^a-zäöüß]+/).filter((w) => w.length >= 6 && !FUELL.has(w)).map((w) => w.slice(0, 6));
+}
+
+// "-431–-404" -> "431–404 v. Chr.", "-27–476" -> "27 v. Chr. – 476 n. Chr."
+function zeitraumText(z) {
+  const m = String(z).match(/^(-?\d+)\s*[–-]\s*(-?\d+)$/);
+  if (!m) return z;
+  const a = Number(m[1]), b = Number(m[2]);
+  if (a < 0 && b < 0) return `${-a}–${-b} v. Chr.`;
+  if (a < 0) return `${-a} v. Chr. – ${b} n. Chr.`;
+  return `${a}–${b}`;
+}
+
+const BEZUG_TEXT = { Ausloeser: 'Auslöser', Wirkung: 'Wirkung', Zeitzeuge: 'Zeitzeuge', Einordnung: 'Einordnung', Gegenposition: 'Gegenposition' };
+
+// Karten aus den Verknuepfungen mit Historia: je Verknuepfung eine Auswahlfrage
+// ("Welcher Denker gehoert hierher?") und eine Umdrehkarte ("Was verbindet ...?").
+// Die drei Ablenker sind die zeitlich naechsten Denker (bevorzugt derselben Tradition), die mit diesem Ereignis
+// NICHT verknuepft sind; die Reihenfolge haengt fest am Text, damit die Karte
+// bei jedem Aufruf gleich aussieht.
+export function geschichtsKarten() {
+  const nachId = Object.fromEntries(PHILOSOPHEN.map((p) => [p.id, p]));
+  const kandidaten = [...new Set(GESCHICHTE.map((g) => g.philosoph))].map((id) => nachId[id]).filter(Boolean)
+    .map((p) => ({ p, jahr: geburtsjahr(p) })).filter((x) => x.jahr !== null);
+  const karten = [];
+  GESCHICHTE.forEach((g) => {
+    const p = nachId[g.philosoph];
+    if (!p) return;
+    const schluessel = g.philosoph + ':' + g.art + ':' + g.id;
+    const bezug = BEZUG_TEXT[g.bezug] || g.bezug;
+    // Ausgeschlossen als Ablenker: alle, die mit demselben Eintrag ODER einem
+    // gleichnamigen Gegenstück verknüpft sind (Krieg und Vertiefung zum selben
+    // Ereignis haben verschiedene Kennungen, z. B. "Peloponnesischer Krieg").
+    const stamm = woerter(g.titel);
+    const verknuepft = new Set(GESCHICHTE.filter((x) => (x.art === g.art && x.id === g.id) || woerter(x.titel).some((w) => stamm.includes(w))).map((x) => x.philosoph));
+    const eigenesJahr = geburtsjahr(p);
+    const ablenker = kandidaten.filter((x) => !verknuepft.has(x.p.id))
+      .map((x) => ({ ...x, abstand: Math.abs(x.jahr - eigenesJahr) + (x.p.tradition === p.tradition ? 0 : 400) }))
+      .sort((a, b) => a.abstand - b.abstand || a.p.id.localeCompare(b.p.id))
+      .slice(0, 3).map((x) => x.p.name);
+    if (ablenker.length === 3 && eigenesJahr !== null) {
+      const optionen = [p.name, ...ablenker];
+      const h0 = parseInt(schluesselAusText(schluessel), 36);
+      const richtig = h0 % 4;
+      [optionen[0], optionen[richtig]] = [optionen[richtig], optionen[0]];
+      karten.push({
+        id: 'g:' + schluessel,
+        typ: 'quiz',
+        herkunft: 'In der Geschichte',
+        frage: `Welcher Denker gehört hierher? ${g.titel} (${zeitraumText(g.zeitraum)}) – Bezug: ${bezug}`,
+        optionen,
+        richtig,
+        antwort: p.name,
+        erklaerung: g.satz,
+        zusatz: bezug
+      });
+    }
+    karten.push({
+      id: 'gv:' + schluessel,
+      typ: 'geschichte',
+      herkunft: 'In der Geschichte',
+      frage: `Was verbindet ${p.name} mit „${g.titel}“ (${zeitraumText(g.zeitraum)})?`,
+      antwort: bezug + ': ' + g.satz,
+      zusatz: bezug
+    });
+  });
+  return karten;
 }
 
 export function alleKarten(quellen) {
@@ -169,6 +253,8 @@ export function alleKarten(quellen) {
       });
     });
   }
+
+  if (quellen.geschichte) karten.push(...geschichtsKarten());
 
   return karten;
 }
@@ -267,6 +353,7 @@ export function quellenText(quellen) {
   if (quellen.begriffe) namen.push('Begriffen');
   if (quellen.zitate) namen.push('Zitaten');
   if (quellen.eigene) namen.push('eigenen Zitaten');
+  if (quellen.geschichte) namen.push('Geschichtsbezügen');
   if (namen.length <= 1) return namen[0] || '–';
   return namen.slice(0, -1).join(', ') + ' und ' + namen[namen.length - 1];
 }
@@ -408,7 +495,7 @@ export default function WiederholenAnsicht() {
   function quellenUmschalten(name) {
     const quellen = { ...einstellungen.quellen, [name]: !einstellungen.quellen[name] };
     // Mindestens eine Quelle muss aktiv bleiben.
-    if (!quellen.quiz && !quellen.begriffe && !quellen.zitate && !quellen.eigene) return;
+    if (!quellen.quiz && !quellen.begriffe && !quellen.zitate && !quellen.eigene && !quellen.geschichte) return;
     const neu = { ...einstellungen, quellen };
     setEinstellungen(neu);
     speichereEinstellungen(neu);
@@ -451,7 +538,8 @@ export default function WiederholenAnsicht() {
         h(Chip, { active: einstellungen.quellen.quiz, onClick: () => quellenUmschalten('quiz') }, `Quizfragen (${QUIZ.length})`),
         h(Chip, { active: einstellungen.quellen.begriffe, onClick: () => quellenUmschalten('begriffe') }, `Begriffe (${BEGRIFFE.length})`),
         h(Chip, { active: einstellungen.quellen.zitate, onClick: () => quellenUmschalten('zitate') }, `Zitate (${ZITATE.length})`),
-        h(Chip, { active: einstellungen.quellen.eigene, onClick: () => quellenUmschalten('eigene') }, `Eigene Zitate (${ladeEigeneZitate().filter((z) => z.autor && z.autor.trim()).length})`)
+        h(Chip, { active: einstellungen.quellen.eigene, onClick: () => quellenUmschalten('eigene') }, `Eigene Zitate (${ladeEigeneZitate().filter((z) => z.autor && z.autor.trim()).length})`),
+        h(Chip, { active: einstellungen.quellen.geschichte, onClick: () => quellenUmschalten('geschichte') }, `In der Geschichte (${geschichtsKarten().length})`)
       ),
       h('div', { className: 'phil-sans', style: { fontSize: '11px', color: FARBEN.grau, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' } }, 'Neue Karten pro Tag'),
       h('div', { style: { display: 'flex', gap: '7px', flexWrap: 'wrap' } },
@@ -555,6 +643,10 @@ export default function WiederholenAnsicht() {
           }, option);
         })
       ),
+      aufgedeckt && karte.erklaerung && h('div', {
+        className: 'phil-sans',
+        style: { fontSize: '13.5px', color: '#2B2F3A', lineHeight: 1.65, marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #8B3A3A33' }
+      }, karte.erklaerung),
       aufgedeckt && h('div', { style: { marginTop: '18px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } },
         h(Knopf, { onClick: () => bewerten(gewaehlt === karte.richtig), symbol: h(Check, { size: 15 }) }, 'Weiter'),
         h('span', { className: 'phil-sans', style: { fontSize: '12.5px', color: gewaehlt === karte.richtig ? FARBEN.gruen : FARBEN.bordeaux } },
