@@ -24,6 +24,7 @@ import { BEGRIFFE } from './daten-begriffe.js';
 import { ZITATE } from './daten-zitate.js';
 import { ladeEigeneZitate } from './eigene-zitate.js';
 import { GESCHICHTE } from './daten-geschichte.js';
+import { erklaerungFuer } from './quiz-hilfe.js';
 import { PHILOSOPHEN } from './daten-philosophen.js';
 
 const h = React.createElement;
@@ -212,6 +213,7 @@ export function alleKarten(quellen) {
       optionen: f.optionen,
       richtig: f.richtig,
       antwort: f.optionen[f.richtig],
+      erklaerung: (() => { const e = erklaerungFuer(f); return e ? 'Zum Nachlesen – ' + e.titel + ': ' + e.text : ''; })(),
       zusatz: f.kategorie
     }));
   }
